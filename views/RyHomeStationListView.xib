@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="12121" systemVersion="16G29" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="12089"/>
+        <capability name="Aspect ratio constraints" minToolsVersion="5.1"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="iN0-l3-epB" customClass="RyHomeStationListView" customModule="renttravel" customModuleProvider="target">
+            <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" style="plain" separatorStyle="none" rowHeight="44" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="uJk-1t-F4V">
+                    <rect key="frame" x="0.0" y="244.5" width="375" height="422.5"/>
+                    <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                    <constraints>
+                        <constraint firstAttribute="width" secondItem="uJk-1t-F4V" secondAttribute="height" multiplier="750:845" id="PDz-37-Twn"/>
+                    </constraints>
+                </tableView>
+                <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="rgZ-cy-K7X">
+                    <rect key="frame" x="0.0" y="0.0" width="375" height="244.5"/>
+                    <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                    <connections>
+                        <action selector="clickDisBtn" destination="iN0-l3-epB" eventType="touchUpInside" id="Kvh-OV-oQv"/>
+                    </connections>
+                </button>
+            </subviews>
+            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+            <constraints>
+                <constraint firstItem="rgZ-cy-K7X" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" id="4l4-ZH-2Ai"/>
+                <constraint firstAttribute="bottom" secondItem="uJk-1t-F4V" secondAttribute="bottom" id="8o8-Sr-1at"/>
+                <constraint firstItem="uJk-1t-F4V" firstAttribute="top" secondItem="rgZ-cy-K7X" secondAttribute="bottom" id="aif-0y-XP8"/>
+                <constraint firstAttribute="trailing" secondItem="rgZ-cy-K7X" secondAttribute="trailing" id="cRL-1I-C0b"/>
+                <constraint firstAttribute="trailing" secondItem="uJk-1t-F4V" secondAttribute="trailing" id="i9n-ap-kCL"/>
+                <constraint firstItem="uJk-1t-F4V" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" id="rl7-Q8-Wkg"/>
+                <constraint firstItem="rgZ-cy-K7X" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="top" id="xKw-XC-iD8"/>
+            </constraints>
+            <connections>
+                <outlet property="tableView" destination="uJk-1t-F4V" id="Il3-lo-GrU"/>
+            </connections>
+        </view>
+    </objects>
+</document>
