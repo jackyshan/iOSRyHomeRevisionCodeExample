@@ -11,12 +11,13 @@ import UIKit
 class RyHomeStationListView: UIView {
 
     // MARK: - 1、公共属性
-    var clickStationBlock: ((_ model: RyHomeNearStationModel) -> Void)?
-    
+    var showBlock: (() -> Void)?
     var dismissBlock: (() -> Void)?
+    var clickStationBlock: ((_ model: RyHomeNearStationModel) -> Void)?
     
     // MARK: - 2、私有属性
     @IBOutlet weak var tableView: UITableView!
+    let noImgV = UIImageView(image: UIImage(named: "img_nothing"))
     
     var mAdapter: RyHomeStationListAdapter?
     
@@ -46,6 +47,9 @@ class RyHomeStationListView: UIView {
     
     func initUI() {
         mAdapter = RyHomeStationListAdapter(tableView: tableView)
+        
+        noImgV.contentMode = .center
+        tableView.addSubview(noImgV)
     }
     
     func initLinstener() {
@@ -57,29 +61,32 @@ class RyHomeStationListView: UIView {
     // MARK: - 4、视图
     override func layoutSubviews() {
         super.layoutSubviews()
+        
+        noImgV.frame = CGRect(x: 10, y: 10, width: AppConfig.SCREEN_WIDTH - 20, height: 200)
     }
     
     // MARK: - 5、代理
     
     // MARK: - 6、公共业务
     func show(superView: UIView) {
-        superView.addSubview(self)
-        self.frame = CGRect.init(x: 0, y: superView.bounds.height, width: superView.bounds.width, height: superView.bounds.height)
-        UIView.animate(withDuration: 0.3) { 
+        showBlock?()
+        tableView.setContentOffset(CGPoint.zero, animated: false)
+        UIView.animate(withDuration: 0.3) {
             self.frame = superView.bounds
         }
         
     }
     
     func dismiss() {
-        UIView.animate(withDuration: 0.3, animations: { 
+        dismissBlock?()
+        UIView.animate(withDuration: 0.3) {
             self.frame = CGRect.init(x: 0, y: self.bounds.height, width: self.bounds.width, height: self.bounds.height)
-        }) { (finished) in
-            self.removeFromSuperview()
         }
     }
     
     func updateAdapterWithArr(_ dataArr: [RyHomeNearStationModel]) {
+        noImgV.isHidden = dataArr.isEmpty == false
+        
         let models = sortModelArray(dataArr)
         models.first?.isNearest = true
         mAdapter?.DataSoure = models
@@ -104,7 +111,6 @@ class RyHomeStationListView: UIView {
     
     @IBAction func clickDisBtn() {
         dismiss()
-        dismissBlock?()
     }
     // MARK: - 8、其他
     deinit {

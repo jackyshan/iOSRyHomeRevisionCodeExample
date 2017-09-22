@@ -25,6 +25,7 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
     @IBOutlet weak var ryHomeMoreDetailView: RyHomeMoreDetailView!
     @IBOutlet weak var ryHomeBottomDetailView: UIView!
     @IBOutlet weak var bottomViewHeightConstant: NSLayoutConstraint!
+    let listView = RyHomeStationListView.view()
     
     fileprivate var mapView: MAMapView!
     fileprivate let zoomscal: CGFloat = 15.5
@@ -41,6 +42,8 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
     var nearStationModelArr: [RyHomeNearStationModel] = [RyHomeNearStationModel]()
     
     var filterType: RyHomeFilterCategoryStationType = .all
+    
+    var ryHomeCommonLineModel = RyHomeStationLineModel()
     
     // MARK: - 2、生命周期
     init() {
@@ -78,7 +81,11 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
         
         initMapView()
         
-        if let listView = self.lineListView {
+        if let lineListView = self.lineListView {
+            self.view.addSubview(lineListView)
+        }
+        
+        if let listView = self.listView {
             self.view.addSubview(listView)
         }
     }
@@ -116,7 +123,30 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
         addStationDetailPanGesture()
         
         //RyHomeStationLineListView
-        clickStationHeaderBlock()
+        clickStationHeaderAction()
+        
+        //stationlistview
+        clickMoreStationListAction()
+        
+        //ryHomeCommonVehicleView
+        ryHomeCommonVehicleView.clickBlockAction = { [weak self] model in
+            if model.mtype == .bus {
+                let vc = BusLineDetailsController()
+                vc.transmitRouteId = model.lid
+                vc.transmitRouteName = model.name
+                vc.transmitRouteDirection = model.direction
+                self?.navigationController?.pushViewController(vc, animated: true)
+            }
+        }
+        
+        //登录通知
+        NotificationCenter.default.addObserver(forName: NSNotification.Name.init("kNotificationLoginSucc"), object: nil, queue: OperationQueue.main) { [weak self] (noti) in
+            if AppConfig.isLogin(false) {
+                guard let disposeBag = self?.disposeBag else {return}
+                self?.getUserDetailInfo().retry(3).subscribe().addDisposableTo(disposeBag)
+            }
+        }
+
     }
     
     // MARK: 初始化data
@@ -124,11 +154,20 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
         
         //h5配置
         getConfigH5Urls().retry(3).subscribe().addDisposableTo(disposeBag)
+        
+        //用户phone
+        if AppConfig.isLogin(false) {
+            getUserDetailInfo().retry(3).subscribe().addDisposableTo(disposeBag)
+        }
+        
+        //广告
+        loadAdvertise()
     }
     
     // MARK: 设置frame
     override func didSystemAutoLayoutComplete() {
         self.lineListView?.frame = CGRect.init(x: 0, y: self.view.bounds.height, width: self.view.bounds.width, height: self.view.bounds.height)
+        self.listView?.frame = CGRect.init(x: 0, y: self.view.bounds.height, width: self.view.bounds.width, height: self.view.bounds.height)
     }
     
     // MARK: - 3、代理
@@ -159,15 +198,18 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
     /// 位置更新，回调获取定点经纬度
     var isFirst = true
     func mapView(_ mapView: MAMapView!, didUpdate userLocation: MAUserLocation!, updatingLocation: Bool) {
-        if updatingLocation == true && isFirst == true {
-            isFirst = false
-            locationUserPlace(nil)
-        }
         
         if updatingLocation == true {
             let uLocation = JZLocationConverter.gcj02(toWgs84: userLocation.location.coordinate)
             AuthManager.This.mLatitude = uLocation.latitude
             AuthManager.This.mLongitude = uLocation.longitude
+        }
+        
+        if updatingLocation == true && isFirst == true {
+            isFirst = false
+            isLocationFailFirst = false
+            locationUserPlace(nil)
+            observeHotRouteWaitTime()
         }
     }
     
@@ -278,7 +320,7 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
         self.mapView.setZoomLevel(zoomscal, animated: true)
         
         movedLocationCoordinate = userAnnotation.coordinate
-        getData()
+        getData(true)
     }
     
     // MARK: 点击seg模块
@@ -295,7 +337,9 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
                 self?.navigationController?.pushViewController(vc, animated: true)
             }
             else if tag == 3 {
-                
+                let vc = KPWebViewController()
+                vc.transferUrl = AuthManager.This.ryH5ConfigModel?.zhujiangyou
+                self?.navigationController?.pushViewController(vc, animated: true)
             }
         }
         
@@ -370,7 +414,7 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
     }
     
     // MARK: 点击滑动站点头部模块
-    func clickStationHeaderBlock() {
+    func clickStationHeaderAction() {
         lineListView?.clickNaviBlock = { [weak self] model in
             guard let userLocation = self?.mapView.userLocation.location else {return}
             guard let destLocation = model.location else {return}
@@ -397,59 +441,62 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
                 self?.getSubwayLineData(sid)
             }
         }
-    }
-    
-    // MARK: 点击用户
-    @IBAction func clickUserAction() {
-        let vc = PersonalCenterVC()
-        vc.mtransmitNoticeUrl = AuthManager.This.ryH5ConfigModel?.info
-        vc.mtransmitFacebackUrl = AuthManager.This.ryH5ConfigModel?.feedback
-        vc.mtransmitJianpaiUrl = AuthManager.This.ryH5ConfigModel?.jianpai
-        self.navigationController?.pushViewController(vc, animated: true)
-    }
-    
-    // MARK: 点击搜索
-    @IBAction func clickSearchAction() {
-        let vc = SearchAllViewController()
-        self.navigationController?.pushViewController(vc, animated: false)
-
-    }
-    
-    // MARK: 点击语音
-    @IBAction func clickVoiceAction() {
-        let vc = SearchForVoiceVC()
-        self.navigationController?.pushViewController(vc, animated: false)
-        vc.delegateVoiceResult = { [weak self] text in
-            let vc = SearchAllViewController()
-            vc.voiceResultText = text
-            self?.navigationController?.pushViewController(vc, animated: false)
+        
+        lineListView?.clickBusinessBlock = { [weak self] model in
+            let vc = KPWebViewController()
+            vc.transferUrl = AuthManager.This.ryH5ConfigModel?.zhujiangyou
+            self?.navigationController?.pushViewController(vc, animated: true)
+        }
+        
+        //linelistview_tableview滑动
+        lineListView?.tableView.panGestureRecognizer.rx.event.subscribe(onNext: { [weak self] (recognizer: UIPanGestureRecognizer) in
+            guard let foffy = self?.lineListView?.frame.origin.y else {return}
+            guard let offy = self?.lineListView?.tableView.contentOffset.y else {return}
+            
+            if foffy > CGFloat(0.0) || offy < CGFloat(0.0) {
+                self?.panGestureStationTogetherAction(recognizer)
+            }
+            
+        }).addDisposableTo(disposeBag)
+        
+        //滑动手势
+        addLineListViewPanGesture()
+        
+        //show dismiss
+        lineListView?.showBlock = { [weak self] in
+            self?.ryHomeSegmentView.isHidden = true
+            self?.ryHomeRightCategoryView.isHidden = true
+            self?.executeMapZoomTopAction()
+        }
+        lineListView?.dismissBlock = { [weak self] in
+            self?.executeMapZoomCenterAction()
+            self?.ryHomeSegmentView.isHidden = false
+            self?.ryHomeRightCategoryView.isHidden = false
         }
     }
     
-    // MARK: 点击路线
-    @IBAction func clickLineChangeAction() {
-        XXT_BusTranferSingleton.This.haveGetMyLocation = false
-        XXT_BusTranferSingleton.This.startName = AppConfig.TransferStartHint
-        XXT_BusTranferSingleton.This.ternimalName = AppConfig.TransferTerminalHint
+    // MARK: 点击展开列表模块
+    func clickMoreStationListAction() {
         
-        let vc = TransferLineController()
-        self.navigationController?.pushViewController(vc, animated: true)
-
-    }
-    
-    // MARK: 点击展开结果
-    @IBAction func clickCheckMoreStations() {
-        guard nearStationModelArr.isEmpty == false else {return}
+        listView?.tableView.panGestureRecognizer.rx.event.subscribe(onNext: { [weak self] (recognizer: UIPanGestureRecognizer) in
+            guard let foffy = self?.listView?.frame.origin.y else {return}
+            guard let offy = self?.listView?.tableView.contentOffset.y else {return}
+            
+            if foffy > CGFloat(0.0) || offy < CGFloat(0.0) {
+                self?.panGestureListTogetherAction(recognizer)
+            }
+            
+        }).addDisposableTo(disposeBag)
         
-        executeMapZoomTopAction()
-        ryHomeSegmentView.isHidden = true
-        locationBtn.isHidden = true
-        lineChangeBtn.isHidden = true
-        ryHomeRightCategoryView.isHidden = true
-        ryHomeCommonVehicleView.isHidden = true
-        let listView = RyHomeStationListView.view()
-        listView?.updateAdapterWithArr(nearStationModelArr)
-        listView?.show(superView: self.view)
+        listView?.showBlock = { [weak self] in
+            self?.executeMapZoomTopAction()
+            self?.ryHomeSegmentView.isHidden = true
+            self?.locationBtn.isHidden = true
+            self?.lineChangeBtn.isHidden = true
+            self?.ryHomeRightCategoryView.isHidden = true
+            self?.ryHomeCommonVehicleView.isHidden = true
+        }
+        
         listView?.dismissBlock = { [weak self] in
             self?.executeMapZoomCenterAction()
             self?.ryHomeSegmentView.isHidden = false
@@ -477,6 +524,43 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
                 self?.navigationController?.pushViewController(vc, animated: true)
             }
         }
+    }
+    
+    // MARK: 点击用户
+    @IBAction func clickUserAction() {
+        let vc = RyPersonCenterViewController()
+        self.navigationController?.pushViewController(vc, animated: true)
+    }
+    
+    // MARK: 点击搜索
+    @IBAction func clickSearchAction() {
+        let vc = SearchAllViewController()
+        self.navigationController?.pushViewController(vc, animated: false)
+
+    }
+    
+    // MARK: 点击语音
+    @IBAction func clickVoiceAction() {
+        let vc = SearchForVoiceVC()
+        self.navigationController?.pushViewController(vc, animated: false)
+        vc.delegateVoiceResult = { [weak self] text in
+            let vc = SearchAllViewController()
+            vc.voiceResultText = text
+            self?.navigationController?.pushViewController(vc, animated: false)
+        }
+    }
+    
+    // MARK: 点击路线
+    @IBAction func clickLineChangeAction() {
+        let vc = RyTransferBusViewController()
+        self.navigationController?.pushViewController(vc, animated: true)
+
+    }
+    
+    // MARK: 点击展开结果
+    @IBAction func clickCheckMoreStations() {
+        listView?.updateAdapterWithArr(nearStationModelArr)
+        listView?.show(superView: self.view)
     }
     
     // MARK: 点击站点
@@ -507,17 +591,8 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
     func addStationDetailTapGesture() {
         let tap = UITapGestureRecognizer()
         tap.rx.event.subscribe(onNext: { [weak self] _ in
-            
             if let sview = self?.view {
                 self?.lineListView?.show(superView: sview)
-                self?.ryHomeSegmentView.isHidden = true
-                self?.ryHomeRightCategoryView.isHidden = true
-                self?.executeMapZoomTopAction()
-                self?.lineListView?.dismissBlock = { [weak self] in
-                    self?.executeMapZoomCenterAction()
-                    self?.ryHomeSegmentView.isHidden = false
-                    self?.ryHomeRightCategoryView.isHidden = false
-                }
             }
         }).addDisposableTo(disposeBag)
         ryHomeStationDetailView.addGestureRecognizer(tap)
@@ -526,66 +601,164 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
     func addStationDetailPanGesture() {
         let pan = UIPanGestureRecognizer()
         pan.rx.event.subscribe(onNext: { [weak self] (recognizer: UIPanGestureRecognizer) in
-            guard let wself = self else {return}
-            
-            wself.lineListView?.isHidden = false
-            if recognizer.state == .began || recognizer.state == .changed {
-                let movement = recognizer.translation(in: wself.view)
-                guard let orect = wself.lineListView?.frame else {return}
-                guard let listView = wself.lineListView else {return}
-                var old_rect = orect
-                let listViewEmptyHeight = listView.getEmptyHeight()
-                let stationDetailHeight: CGFloat = 68.0
-                if recognizer.state == .began {
-                    old_rect.origin.y = old_rect.origin.y - listViewEmptyHeight - stationDetailHeight
-                }
-                else {
-                    old_rect.origin.y = old_rect.origin.y + movement.y
-                }
-                if old_rect.origin.y < 0 {
-                    wself.lineListView?.frame = wself.view.bounds
-                }
-                else if old_rect.origin.y > wself.view.bounds.height {
-                    wself.lineListView?.frame = CGRect.init(x: 0, y: wself.view.bounds.height, width: wself.view.bounds.width, height: wself.view.bounds.height)
-                }
-                else {
-                    wself.lineListView?.frame = old_rect
-                }
-                
-                recognizer.setTranslation(CGPoint.zero, in: wself.view)
-            }
-            else if recognizer.state == .ended || recognizer.state == .cancelled {
-                let halfPoint = wself.view.bounds.height*1/4
-                guard let listView = wself.lineListView else {return}
-                if listView.frame.origin.y > halfPoint {
-                    listView.dismiss()
-                }
-                else {
-                    listView.show(superView: wself.view)
-                }
-            }
+            self?.panGestureStationTogetherAction(recognizer)
         }).addDisposableTo(disposeBag)
         ryHomeStationDetailView.addGestureRecognizer(pan)
+    }
+    
+    // MARK: lineListView添加手势
+    func addLineListViewPanGesture() {
+        let pan = UIPanGestureRecognizer()
+        pan.rx.event.subscribe(onNext: { [weak self] (recognizer: UIPanGestureRecognizer) in
+            self?.panGestureStationTogetherAction(recognizer)
+        }).addDisposableTo(disposeBag)
+        lineListView?.stationHeaderDetailView.addGestureRecognizer(pan)
+    }
+    
+    // MARK: 站点滑动手势统一处理
+    func panGestureStationTogetherAction(_ recognizer: UIPanGestureRecognizer) {
+        let wself = self
+        
+        if recognizer.state == .began || recognizer.state == .changed {
+            let movement = recognizer.translation(in: wself.view)
+            guard let orect = wself.lineListView?.frame else {return}
+            guard let listView = wself.lineListView else {return}
+            var old_rect = orect
+            let listViewEmptyHeight = listView.getEmptyHeight()
+            let stationDetailHeight: CGFloat = 68.0
+            if recognizer.state == .began {
+                old_rect.origin.y = old_rect.origin.y - listViewEmptyHeight - stationDetailHeight
+            }
+            else {
+                old_rect.origin.y = old_rect.origin.y + movement.y
+            }
+            if old_rect.origin.y < 0 {
+                wself.lineListView?.frame = wself.view.bounds
+            }
+            else if old_rect.origin.y > wself.view.bounds.height {
+                wself.lineListView?.frame = CGRect.init(x: 0, y: wself.view.bounds.height, width: wself.view.bounds.width, height: wself.view.bounds.height)
+            }
+            else {
+                wself.lineListView?.frame = old_rect
+            }
+            
+            recognizer.setTranslation(CGPoint.zero, in: wself.view)
+        }
+        else if recognizer.state == .ended || recognizer.state == .cancelled {
+            let halfPoint = wself.view.bounds.height*1/4
+            guard let listView = wself.lineListView else {return}
+            if listView.frame.origin.y > halfPoint {
+                listView.dismiss()
+            }
+            else {
+                listView.show(superView: wself.view)
+            }
+        }
+    }
+    
+    // MARK: 展开更多列表滑动
+    func panGestureListTogetherAction(_ recognizer: UIPanGestureRecognizer) {
+        let wself = self
+        
+        if recognizer.state == .began || recognizer.state == .changed {
+            let movement = recognizer.translation(in: wself.view)
+            guard let orect = wself.listView?.frame else {return}
+            var old_rect = orect
+            if recognizer.state == .began {
+                old_rect.origin.y = old_rect.origin.y
+            }
+            else {
+                old_rect.origin.y = old_rect.origin.y + movement.y
+            }
+            if old_rect.origin.y < 0 {
+                wself.listView?.frame = wself.view.bounds
+            }
+            else if old_rect.origin.y > wself.view.bounds.height {
+                wself.listView?.frame = CGRect.init(x: 0, y: wself.view.bounds.height, width: wself.view.bounds.width, height: wself.view.bounds.height)
+            }
+            else {
+                wself.listView?.frame = old_rect
+            }
+            
+            recognizer.setTranslation(CGPoint.zero, in: wself.view)
+        }
+        else if recognizer.state == .ended || recognizer.state == .cancelled {
+            let halfPoint = wself.view.bounds.height*1/4
+            guard let listView = wself.listView else {return}
+            if listView.frame.origin.y > halfPoint {
+                listView.dismiss()
+            }
+            else {
+                listView.show(superView: wself.view)
+            }
+        }
     }
     
     // MARK: 地图缩放范围
     func executeMapZoomTopAction() {
         guard let location = movedLocationCoordinate else {return}
-        let mstatus = MAMapStatus.init(center: location, zoomLevel: zoomscal, rotationDegree: 0, cameraDegree: 0, screenAnchor: CGPoint.init(x: 0.5, y: 0.15))
+        let mstatus = MAMapStatus.init(center: location, zoomLevel: zoomscal, rotationDegree: mapView.rotationDegree, cameraDegree: mapView.cameraDegree, screenAnchor: CGPoint.init(x: 0.5, y: 0.15))
         mapView.setMapStatus(mstatus, animated: true, duration: 0.2)
     }
     
     func executeMapZoomCenterAction() {
         guard let location = movedLocationCoordinate else {return}
-        let mstatus = MAMapStatus.init(center: location, zoomLevel: zoomscal, rotationDegree: 0, cameraDegree: 0, screenAnchor: CGPoint.init(x: 0.5, y: 0.5))
+        let mstatus = MAMapStatus.init(center: location, zoomLevel: zoomscal, rotationDegree: mapView.rotationDegree, cameraDegree: mapView.cameraDegree, screenAnchor: CGPoint.init(x: 0.5, y: 0.5))
         mapView.setMapStatus(mstatus, animated: true, duration: 0.2)
 
+    }
+    
+    // MARK: 创建广告View
+    fileprivate func createAdView(_ ADModels: [AdvertiseListInfo]) {
+        let readAdDay = UserDefaults.standard.integer(forKey: AppConfig.AdAlertDay)
+        let calendar = Calendar.current
+        let dateComponent = (calendar as NSCalendar).components([.day], from: Date())
+        
+        var views = Array<UIView>()
+        for i in 0..<ADModels.count {
+            if AdvertiseViewType(rawValue: Int(ADModels[i].type)) != .text && ADModels[i].pic.characters.count == 0 {
+                continue
+            }
+            
+            //读取每天广告推送次数
+            let readAdCount = UserDefaults.standard.integer(forKey: "\(ADModels[i].adid)_\(ADModels[i].onedaycount)")
+            //读取广告推送天数
+            let read_daycount = UserDefaults.standard.integer(forKey: "\(ADModels[i].adid)_\(ADModels[i].daycount)")
+            
+            if readAdCount == 0 {
+                UserDefaults.standard.set(read_daycount+1, forKey: "\(ADModels[i].adid)_\(ADModels[i].daycount)")
+                UserDefaults.standard.synchronize()
+            }
+            if (read_daycount < Int(ADModels[i].daycount)) || (Int(ADModels[i].daycount) == -1) {
+                if (readAdDay == dateComponent.day && readAdCount < Int(ADModels[i].onedaycount)) || (Int(ADModels[i].onedaycount) == -1) {
+                    
+                    let adView = AdvertiseView(model: ADModels[i])
+                    adView.backgroundColor = UIColor.white
+                    views.append(adView)
+                    
+                    UserDefaults.standard.set(readAdCount+1, forKey: "\(ADModels[i].adid)_\(ADModels[i].onedaycount)")
+                    UserDefaults.standard.synchronize()
+                    
+                }else if readAdDay != dateComponent.day {
+                    UserDefaults.standard.set(Int(dateComponent.day!), forKey: AppConfig.AdAlertDay)
+                    for i in 0..<ADModels.count {
+                        UserDefaults.standard.set(0, forKey: "\(ADModels[i].adid)_\(ADModels[i].onedaycount)")
+                    }
+                    UserDefaults.standard.synchronize()
+                    
+                }
+            }
+        }
+        if views.count <= 0 {
+            return
+        }
+        AdAlertViewManager.This.showWithContentViews(views)
     }
     
     // MARK: - 5、网络
     // MARK: 周边地铁、水巴、公交站
     let disposeBag = DisposeBag()
-    func getData() {
+    func getData(_ isUserLocation: Bool = false) {
         ryHomeRightCategoryView.updateFilterIcon(filterType)
         
         guard let location = movedLocationCoordinate else {return}
@@ -622,7 +795,7 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
         symbols?.concat().retry(2).subscribe().addDisposableTo(disposeBag)
     }
     
-    func searchSubwayData(_ location: CLLocationCoordinate2D) -> Observable<Bool> {
+    func searchSubwayData(_ location: CLLocationCoordinate2D, _ isUserLocation: Bool = false) -> Observable<Bool> {
         return Observable<Bool>.create { [weak self] (observer) -> Disposable in
             let send = SubwaySendModel()
             send.latitude = location.latitude
@@ -630,10 +803,12 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
             send.range = 500
             SubwayNetwork.This.doTask(SubwayNetwork.CMD_getByCoord, data: send, controller: nil, success: {[weak self] (response: SubwayResponseModel?) in
                 observer.onCompleted()
-                self?.subWayResponseModel = nil
                 guard let resp = response else {return}
                 guard resp.line.count > 0 else {return}
-                self?.subWayResponseModel = response
+                if isUserLocation == true {
+                    self?.subWayResponseModel = nil
+                    self?.subWayResponseModel = response
+                }
                 guard resp.station.count > 0 else {return}
                 guard let stations: [SubwayStationModel] = (resp.station as NSArray).jsonArray() else {return}
                 
@@ -659,13 +834,14 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
                 
                 }, error: { [weak self] (err, msg) in
                     self?.subWayResponseModel = nil
+                    observer.onError(TestError.test)
                 }, com: nil, showWait: false)
 
             return Disposables.create()
         }
     }
     
-    func searchBoatData(_ location: CLLocationCoordinate2D) -> Observable<Bool> {
+    func searchBoatData(_ location: CLLocationCoordinate2D, _ isUserLocation: Bool = false) -> Observable<Bool> {
         return Observable<Bool>.create { [weak self] (observer) -> Disposable in
             let send = WaterBusSendModel()
             send.latitude = location.latitude
@@ -674,10 +850,12 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
             
             WaterBusNetWork.This.doArrayTask(WaterBusNetWork.CMD_getByCoord, data: send, controller: nil, success: { [weak self] (response: [ShuiBaStationModel]?) in
                 observer.onCompleted()
-                self?.shuibaResponseArr = nil
                 guard let stations = response else {return}
                 guard stations.count > 0 else {return}
-                self?.shuibaResponseArr = stations
+                if isUserLocation == true {
+                    self?.shuibaResponseArr = nil
+                    self?.shuibaResponseArr = stations
+                }
                 
                 for model in stations {
                     let annotation = RyHomeMAPointAnnotation(.boat)
@@ -699,7 +877,10 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
                 }
                 self?.mapView.addAnnotations(self?.boatAnnotations)
 
-                }, error: nil, com: nil, showWait: false)
+                }, error: { [weak self] (_, _) in
+                    self?.shuibaResponseArr = nil
+                    observer.onError(TestError.test)
+            }, com: nil, showWait: false)
 
             return Disposables.create()
         }
@@ -738,7 +919,9 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
                 }
                 self?.mapView.addAnnotations(self?.busStationAnnotations)
                 
-            }, error: nil, com: nil, showWait: false)
+            }, error: { (_, _) in
+                observer.onError(TestError.test)
+            }, com: nil, showWait: false)
 
             return Disposables.create()
         }
@@ -807,11 +990,15 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
                             AuthManager.This.mJianpai = listInfo[i].url
                             h5ConfigModel.jianpai_share = listInfo[i].url
                         }
+                        if listInfo[i].name == "h5.zhujiangyou" {
+                            h5ConfigModel.zhujiangyou = listInfo[i].url
+                        }
                     }
                     AuthManager.This.ryH5ConfigModel = h5ConfigModel
                 }
-                
-            }, error: nil, com: nil, showWait: false)
+            }, error: { (_, _) in
+                observer.onError(TestError.test)
+            }, com: nil, showWait: false)
             
             return Disposables.create()
         }
@@ -831,9 +1018,130 @@ class RyHomeViewController: GdWalkNaviBaseViewController, MAMapViewDelegate  {
             }
             }, error: nil, com: nil, showWait: true)
     }
+    
+    // MARK: 获取用户phone
+    func getUserDetailInfo() -> Observable<Bool> {
+        return Observable<Bool>.create {(observer) -> Disposable in
+            let userSend = UserSendModel()
+            userSend.uuid = AuthManager.This.getLoginInfo()?.uuid
+            ManagerNetWork.This.doTask(ManagerNetWork.CMD_GetUserDetail, data: userSend, controller: self, success: { (responseObj:UserDetailInfo?) in
+                observer.onCompleted()
+                
+                AuthManager.This.phone = responseObj?.tel
+                
+                NotificationCenter.default.post(name: NSNotification.Name.init("kNotificationRyUserId"), object: nil)
+                
+            }, error: { (_, _) in
+                observer.onError(TestError.test)
+            }, com: nil, showWait: false)
+            
+            return Disposables.create()
+        }
+    }
+    
+    // MARK: 线路observe统一调用
+    func observeHotRouteWaitTime() {
+        var isUserCommonRecode: Bool = false
+        if let data = UserDefaults.standard.object(forKey: "kRyUserCommonBusRouteKey") {
+            if let rmodel = try? SearchBusRouteRespModel.init(data: data as! Data) {
+                ryHomeCommonLineModel.mtype = .bus
+                ryHomeCommonLineModel.lid = rmodel.i
+                ryHomeCommonLineModel.name = rmodel.n
+                ryHomeCommonLineModel.desc = "开往：\(rmodel.end)"
+                ryHomeCommonLineModel.direction = "0"
+                isUserCommonRecode = true
+            }
+        }
+        
+        let symbol1 = getHotRouteInfo()
+        let symbol2 = getNearStationByRouteInfo()
+        let symbol3 = getForecastWaitTimeInfo()
+        
+        let symbols: Observable<Observable<Bool>> = isUserCommonRecode == true ? Observable.of(symbol2, symbol3) : Observable.of(symbol1, symbol2, symbol3)
+        symbols.concat().retry(3).subscribe().addDisposableTo(disposeBag)
+    }
+    
+    // MARK: 获取热门线路预测时间
+    func getHotRouteInfo() -> Observable<Bool> {
+        return Observable<Bool>.create {(observer) -> Disposable in
+            BusNetWork.This.doArrayTask(BusNetWork.CMD_getHot, data: BaseModel(), controller: nil, success: { [weak self] (list: [RyHomeRouteHotResponseModel]?) in
+                guard let model = list?.first else {return}
+                self?.ryHomeCommonLineModel.mtype = .bus
+                self?.ryHomeCommonLineModel.lid = model.routeid ?? "-"
+                self?.ryHomeCommonLineModel.name = model.routename ?? "-"
+                self?.ryHomeCommonLineModel.desc = "开往：\(model.dname ?? "-")"
+                self?.ryHomeCommonLineModel.direction = model.direction ?? "0"
+                observer.onCompleted()
+            }, error: { (_, _) in
+                observer.onError(TestError.test)
+            }, com: nil, showWait: false)
+            
+            return Disposables.create()
+        }
+    }
+    
+    // MARK: 获取线路上距离最近的点
+    func getNearStationByRouteInfo() -> Observable<Bool> {
+        return Observable<Bool>.create { [weak self] (observer) -> Disposable in
+            let send = RyHomeNearStationSendModel()
+            send.routeId = self?.ryHomeCommonLineModel.lid
+            send.latitude = AuthManager.This.mLatitude
+            send.longitude = AuthManager.This.mLongitude
+            send.direction = "0"
+            BusNetWork.This.doTask(BusNetWork.CMD_getNearStationByRoute, data: send, controller: nil, success: { [weak self] (response: RyHomeNearStationResponseModel?) in
+                guard let model = response else {return}
+                self?.ryHomeCommonLineModel.sid = model.i ?? ""
+                observer.onCompleted()
+            }, error: { (_, _) in
+                observer.onError(TestError.test)
+            }, com: nil, showWait: false)
+            
+            return Disposables.create()
+        }
+    }
+    
+    // MARK: 根据站点id获取预测时间
+    func getForecastWaitTimeInfo() -> Observable<Bool> {
+        return Observable<Bool>.create { [weak self] (observer) -> Disposable in
+            let send = RyHomeWaitTimeSendModel()
+            send.routeStationId = self?.ryHomeCommonLineModel.sid
+            send.num = 1
+            BusNetWork.This.doTask(BusNetWork.CMD_forecastWaitTime, data: send, controller: nil, success: { [weak self] (response: RyHomeWaitTimeResponseModel?) in
+                guard let list = response?.list else {return}
+                guard let dict = list.first else {return}
+                self?.ryHomeCommonLineModel.time = dict["time"] as! Int
+                self?.ryHomeCommonLineModel.distance = dict["count"] as! Int
+                
+                if let ryHomeCommonLineModel = self?.ryHomeCommonLineModel {
+                    self?.ryHomeCommonVehicleView.alpha = 1
+                    self?.ryHomeCommonVehicleView.updateWithModel(model: ryHomeCommonLineModel)
+                }
+                
+                observer.onCompleted()
+                }, error: { (_, _) in
+                    observer.onError(TestError.test)
+            }, com: nil, showWait: false)
+            
+            return Disposables.create()
+        }
+    }
+    
+    // MARK: 加载广告数据
+    fileprivate func loadAdvertise(){
+        let send = AdvertiseSendInfo()
+        send.positoinid = "3";
+        AdvertiseNetWork.This.doArrayTask(AdvertiseNetWork.CMD_getAd, data: send, controller: self, success: { [weak self] (responseObj:[AdvertiseListInfo]?) in
+            if responseObj != nil && responseObj!.count > 0 {
+                self?.createAdView(responseObj!)
+            }
+        }, error: nil, com: nil, showWait: false)
+    }
+
 
     // MARK: - 6、其他
     deinit {
+        NotificationCenter.default.removeObserver(self)
+        
         if let appIdx = self.getClassName().range(of: Tools.BundleName)?.upperBound {
             Log.i("销毁页面"+self.getClassName().substring(from: appIdx))
         }
@@ -864,7 +1172,6 @@ class RyHomeMAAnnotationView: MAAnnotationView {
     var mType: RyHomeAnnotationType = .busStation
     
     var mStationModel: RyHomeNearStationModel?
-
     
     var iskSelected = false
     

@@ -11,15 +11,20 @@ import UIKit
 class RyHomeStationLineListView: UIView {
 
     // MARK: - 1、公共属性
+    var showBlock: (() -> Void)?
     var dismissBlock: (() -> Void)?
     var clickNaviBlock: ((_ model: RyHomeNearStationModel) -> Void)?
     var clickLineBlock: ((_ model: RyHomeStationLineModel) -> Void)?
+    var clickBusinessBlock: ((_ model: RyHomeNearStationModel) -> Void)?
     // MARK: - 2、私有属性
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var nameLb: UILabel!
     @IBOutlet weak var descLb: UILabel!
     @IBOutlet weak var distanceLb: UILabel!
     @IBOutlet weak var emptyBtn: UIButton!
+    @IBOutlet weak var stationHeaderDetailView: UIView!
+    @IBOutlet weak var businessView: UIView!
+    @IBOutlet weak var businessConstraint: NSLayoutConstraint!
 
     var mAdapter: RyHomeStationLineListAdapter?
     var cmodel: RyHomeNearStationModel?
@@ -56,6 +61,11 @@ class RyHomeStationLineListView: UIView {
         mAdapter?.cellOnClick({ [weak self] (model) in
             self?.clickLineBlock?(model)
         })
+        
+        let tap = UITapGestureRecognizer()
+        tap.addTarget(self, action: #selector(dismiss))
+        stationHeaderDetailView.addGestureRecognizer(tap)
+
     }
     
     // MARK: - 4、视图
@@ -71,7 +81,9 @@ class RyHomeStationLineListView: UIView {
         
         nameLb.text = model.name
         descLb.text = model.desc
-        distanceLb.text = "距离您\(Int(model.locationDistance > 1000 ? model.locationDistance/1000 : model.locationDistance))\(model.locationDistance > 1000 ? "km" : "m")"
+        
+        let distance = model.locationDistance > 1000 ? model.locationDistance/1000 : model.locationDistance
+        distanceLb.text = model.locationDistance == 0 ? "" : "距离您\(String.init(format: model.locationDistance > 1000 ? "%.1f" : "%.f", distance))\(model.locationDistance > 1000 ? "km" : "m")"
         
         mAdapter?.DataSoure = []
         if model.mtype == .busStation {
@@ -83,9 +95,14 @@ class RyHomeStationLineListView: UIView {
         else if model.mtype == .subway {
             getSubwayLineListData()
         }
+        
+        businessView.isHidden = model.mtype == .boat ? false : true
+        businessConstraint.constant = model.mtype == .boat ? 29 : 0
     }
     
     func show(superView: UIView) {
+        showBlock?()
+        tableView.setContentOffset(CGPoint.zero, animated: false)
         UIView.animate(withDuration: 0.3) {
             self.frame = superView.bounds
         }
@@ -112,6 +129,12 @@ class RyHomeStationLineListView: UIView {
         guard let model = cmodel else {return}
         
         clickNaviBlock?(model)
+    }
+    
+    @IBAction func clickBusinessAction() {
+        guard let model = cmodel else {return}
+        
+        clickBusinessBlock?(model)
     }
     
     // MARK: - 网络
@@ -172,6 +195,7 @@ class RyHomeStationLineListView: UIView {
     func getBoatLineListData() {
         let send = WaterBusSendModel()
         send.stationNameId = cmodel?.sid
+        ViewUitl.showLoadingInView(tableView)
         WaterBusNetWork.This.doTask(WaterBusNetWork.CMD_getStationDeail, data: send, controller: nil, success: { [weak self] (response: GetRoutesStationDeailModel?) in
             guard let wself = self else {
                 return
@@ -195,12 +219,50 @@ class RyHomeStationLineListView: UIView {
             }
             wself.mAdapter?.DataSoure = models
             
-            }, error:nil, com: nil, showWait: false)
+            }, error:nil, com:  {
+                ViewUitl.hideLoadingInView(self.tableView)
+            }, showWait: false)
 
     }
     
+    // MARK: 地铁线路
     func getSubwayLineListData() {
+        let send = RySubwayLineListSendModel()
+        send.sid = Int(cmodel?.sid ?? "0") ?? 0
+        send.sname = cmodel?.name
+        send.latitude = cmodel?.location?.coordinate.latitude ?? 0
+        send.longitude = cmodel?.location?.coordinate.longitude ?? 0
         
+        ViewUitl.showLoadingInView(tableView)
+        RySubwayLineListNetwork.This.doTask(RySubwayLineListNetwork.CMD_getTransferLinesBySid, data: send, controller: nil, success: { [weak self] (responseObj: RySubwayLineListRespModel?) in
+            guard let wself = self else {
+                return
+            }
+            
+            guard let resp = responseObj else {
+                return
+            }
+            
+            guard let slines = resp.lines else {
+                return
+            }
+
+            var models = [RyHomeStationLineModel]()
+            let lines: [RySubwayLineListDetailRespModel] = (slines as NSArray).jsonArray()!
+            for smodel in  lines {
+                let model = RyHomeStationLineModel()
+                model.mtype = .subway
+                model.name = smodel.lname ?? ""
+                model.desc = "开往: \(smodel.ename ?? "")"
+                model.lid = smodel.lid ?? ""
+                model.isHiddenTimeDistance = true
+                models.append(model)
+            }
+            wself.mAdapter?.DataSoure = models
+
+            }, error: nil, com:  {
+                ViewUitl.hideLoadingInView(self.tableView)
+            }, showWait: false)
     }
 
     // MARK: - 8、其他

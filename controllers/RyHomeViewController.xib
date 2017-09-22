@@ -59,7 +59,7 @@
                         <button opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" contentHorizontalAlignment="left" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="YiA-4f-eoD">
                             <rect key="frame" x="48" y="22" width="265" height="42"/>
                             <fontDescription key="fontDescription" type="system" pointSize="14"/>
-                            <state key="normal" title="搜地点、查公交，找路线">
+                            <state key="normal" title="搜地点、查公交、找线路">
                                 <color key="titleColor" red="0.53333333333333333" green="0.53333333333333333" blue="0.53333333333333333" alpha="1" colorSpace="calibratedRGB"/>
                             </state>
                             <connections>
@@ -201,7 +201,7 @@
                         <outlet property="moveLineView" destination="IRe-sY-aOK" id="MRm-BH-4lD"/>
                     </connections>
                 </view>
-                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="fUF-zu-0UI" customClass="RyHomeCommonVehicleView" customModule="renttravel" customModuleProvider="target">
+                <view alpha="0.0" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="fUF-zu-0UI" customClass="RyHomeCommonVehicleView" customModule="renttravel" customModuleProvider="target">
                     <rect key="frame" x="16" y="122" width="343" height="48"/>
                     <subviews>
                         <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="hYi-kD-qK3">
@@ -239,7 +239,7 @@
                             <nil key="highlightedColor"/>
                         </label>
                         <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="开往：总统府总站" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="U2e-Wc-qfR">
-                            <rect key="frame" x="49" y="28" width="98.5" height="12"/>
+                            <rect key="frame" x="49" y="28" width="214" height="12"/>
                             <constraints>
                                 <constraint firstAttribute="height" constant="12" id="u67-b9-5a6"/>
                             </constraints>
@@ -270,7 +270,7 @@
                             </attributedString>
                             <nil key="highlightedColor"/>
                         </label>
-                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" usesAttributedText="YES" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="nz1-2o-aOP">
+                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="252" verticalHuggingPriority="251" horizontalCompressionResistancePriority="751" usesAttributedText="YES" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="nz1-2o-aOP">
                             <rect key="frame" x="263" y="30" width="69" height="12"/>
                             <constraints>
                                 <constraint firstAttribute="height" constant="12" id="427-33-zJN"/>
@@ -297,6 +297,12 @@
                             </attributedString>
                             <nil key="highlightedColor"/>
                         </label>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="qmG-PF-7pH">
+                            <rect key="frame" x="0.0" y="0.0" width="343" height="48"/>
+                            <connections>
+                                <action selector="clickBtnAction" destination="fUF-zu-0UI" eventType="touchUpInside" id="MDk-Qc-byE"/>
+                            </connections>
+                        </button>
                     </subviews>
                     <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                     <constraints>
@@ -305,6 +311,7 @@
                         <constraint firstItem="U2e-Wc-qfR" firstAttribute="leading" secondItem="9mM-m6-3yU" secondAttribute="leading" id="4kC-9z-iqN"/>
                         <constraint firstAttribute="trailing" secondItem="N7a-IY-Ufq" secondAttribute="trailing" constant="11" id="AgM-P5-95f"/>
                         <constraint firstItem="U2e-Wc-qfR" firstAttribute="top" secondItem="9mM-m6-3yU" secondAttribute="bottom" constant="5" id="BE6-jY-1n0"/>
+                        <constraint firstItem="qmG-PF-7pH" firstAttribute="leading" secondItem="fUF-zu-0UI" secondAttribute="leading" id="Jk7-wi-kui"/>
                         <constraint firstItem="nz1-2o-aOP" firstAttribute="top" secondItem="N7a-IY-Ufq" secondAttribute="bottom" constant="7" id="S7i-hk-75J"/>
                         <constraint firstItem="9mM-m6-3yU" firstAttribute="top" secondItem="fUF-zu-0UI" secondAttribute="top" constant="8" id="YTj-jS-VFv"/>
                         <constraint firstItem="N7a-IY-Ufq" firstAttribute="top" secondItem="fUF-zu-0UI" secondAttribute="top" constant="8" id="ZaC-J2-pIb"/>
@@ -313,12 +320,23 @@
                         <constraint firstAttribute="height" constant="48" id="nk9-go-SbN"/>
                         <constraint firstItem="MfS-EK-6un" firstAttribute="top" secondItem="hYi-kD-qK3" secondAttribute="bottom" constant="7" id="nq7-4w-4oZ"/>
                         <constraint firstItem="hYi-kD-qK3" firstAttribute="top" secondItem="fUF-zu-0UI" secondAttribute="top" id="rRn-pQ-AJU"/>
+                        <constraint firstAttribute="trailing" secondItem="qmG-PF-7pH" secondAttribute="trailing" id="tR1-WZ-UjM"/>
+                        <constraint firstItem="qmG-PF-7pH" firstAttribute="top" secondItem="fUF-zu-0UI" secondAttribute="top" id="w6Z-0Z-ofJ"/>
+                        <constraint firstAttribute="bottom" secondItem="qmG-PF-7pH" secondAttribute="bottom" id="wNl-e7-Bje"/>
+                        <constraint firstItem="nz1-2o-aOP" firstAttribute="leading" secondItem="U2e-Wc-qfR" secondAttribute="trailing" id="wpt-Rp-n0h"/>
                     </constraints>
                     <userDefinedRuntimeAttributes>
                         <userDefinedRuntimeAttribute type="number" keyPath="cornerRadius">
                             <real key="value" value="4"/>
                         </userDefinedRuntimeAttribute>
                     </userDefinedRuntimeAttributes>
+                    <connections>
+                        <outlet property="descLb" destination="U2e-Wc-qfR" id="xaV-6u-5ne"/>
+                        <outlet property="distanceLb" destination="nz1-2o-aOP" id="oZS-s1-eW0"/>
+                        <outlet property="iconLb" destination="MfS-EK-6un" id="hqR-0C-OxX"/>
+                        <outlet property="nameLb" destination="9mM-m6-3yU" id="XVG-45-sJH"/>
+                        <outlet property="timeLb" destination="N7a-IY-Ufq" id="Jwv-Lr-07q"/>
+                    </connections>
                 </view>
                 <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="f63-Q6-Jeg" customClass="RyHomeRightCategoryView" customModule="renttravel" customModuleProvider="target">
                     <rect key="frame" x="329" y="182" width="34" height="180"/>

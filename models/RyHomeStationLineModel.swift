@@ -15,6 +15,8 @@ class RyHomeStationLineModel: BaseModel {
     var time: Int = 0
     var distance: Int = 0
     var lid: String = ""
-    var isHiddenTimeDistance: Bool = false
     
+    var isHiddenTimeDistance: Bool = false
+    var direction: String = "0"
+    var sid: String = ""
 }

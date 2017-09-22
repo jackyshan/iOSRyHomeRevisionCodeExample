@@ -37,7 +37,7 @@
                         </userDefinedRuntimeAttributes>
                     </label>
                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="体育西路站" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="PPk-pH-BJe">
-                        <rect key="frame" x="42" y="11" width="76.5" height="14"/>
+                        <rect key="frame" x="42" y="11" width="197" height="14"/>
                         <constraints>
                             <constraint firstAttribute="height" constant="14" id="2xY-Fr-rgx"/>
                         </constraints>
@@ -61,7 +61,7 @@
                             <constraint firstAttribute="height" constant="1" id="kh7-c4-o5b"/>
                         </constraints>
                     </view>
-                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="距离您150m" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="NCP-Sc-J8P">
+                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="252" verticalHuggingPriority="251" horizontalCompressionResistancePriority="751" text="距离您150m" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="NCP-Sc-J8P">
                         <rect key="frame" x="239" y="15" width="68" height="12"/>
                         <constraints>
                             <constraint firstAttribute="height" constant="12" id="zUr-Ce-jAC"/>
@@ -83,6 +83,7 @@
                 <constraints>
                     <constraint firstItem="Ni5-vV-MBE" firstAttribute="leading" secondItem="H2p-sc-9uM" secondAttribute="leading" constant="15" id="2c8-dx-E2e"/>
                     <constraint firstItem="NCP-Sc-J8P" firstAttribute="top" secondItem="H2p-sc-9uM" secondAttribute="top" constant="15" id="41L-K1-JZ7"/>
+                    <constraint firstItem="NCP-Sc-J8P" firstAttribute="leading" secondItem="PPk-pH-BJe" secondAttribute="trailing" id="4Jc-HH-7l5"/>
                     <constraint firstItem="PPk-pH-BJe" firstAttribute="top" secondItem="H2p-sc-9uM" secondAttribute="top" constant="11" id="7An-Gp-5r1"/>
                     <constraint firstItem="NCP-Sc-J8P" firstAttribute="trailing" secondItem="6G3-Ix-FNP" secondAttribute="trailing" id="CCW-5v-2xc"/>
                     <constraint firstAttribute="trailing" secondItem="rqd-Q5-C7O" secondAttribute="trailing" id="CeJ-h0-oth"/>

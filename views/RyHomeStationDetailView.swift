@@ -65,7 +65,8 @@ class RyHomeStationDetailView: UIView {
         iconLb.HexString = model.mtype == .subway ? "e723" : model.mtype == .boat ? "e726" : model.mtype == .busStation ? "e710" : "e710"
         nameLb.text = model.name
         descLb.text = model.desc
-        distanceLb.text = model.locationDistance == 0 ? "" : "距离您\(Int(model.locationDistance > 1000 ? model.locationDistance/1000 : model.locationDistance))\(model.locationDistance > 1000 ? "km" : "m")"
+        let distance = model.locationDistance > 1000 ? model.locationDistance/1000 : model.locationDistance
+        distanceLb.text = model.locationDistance == 0 ? "" : "距离您\(String.init(format: model.locationDistance > 1000 ? "%.1f" : "%.f", distance))\(model.locationDistance > 1000 ? "km" : "m")"
 
     }
     
